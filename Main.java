@@ -1,4 +1,4 @@
-
+package project_2;
 
 
 import javax.swing.*;

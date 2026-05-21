@@ -1,4 +1,4 @@
-package chatapp;
+package project_2;
 
 import java.io.*;
 import java.net.*;
@@ -6,7 +6,6 @@ import java.util.Scanner;
 
 public class ChatClient {
 
-    private static final String SERVER_HOST = "localhost";
     private static final int SERVER_PORT = 5000;
     private static volatile boolean running = true;
 
@@ -25,20 +24,50 @@ public class ChatClient {
     public static void main(String[] args) {
         printClientBanner();
 
-        System.out.println(CYAN + "  Connecting to server..." + RESET);
+        Scanner ipScanner = new Scanner(System.in);
+
+        // ─── Show this machine's LAN IP ──────────────────────────────
+        try {
+            InetAddress localIP = InetAddress.getLocalHost();
+            System.out.println(CYAN + BOLD + "  [INFO] Your LAN IP: " + GREEN + localIP.getHostAddress() + RESET);
+        } catch (UnknownHostException e) {
+            System.out.println(YELLOW + "  [!] Could not detect local IP." + RESET);
+        }
         System.out.println();
 
-        try (Socket socket = new Socket(SERVER_HOST, SERVER_PORT)) {
+        // ─── Ask server IP from user ─────────────────────────────────
+        String serverHost = "";
+        while (true) {
+            System.out.print(CYAN + "  Enter Server IP (or press Enter for localhost): " + RESET);
+            String input = ipScanner.nextLine().trim();
+            if (input.isEmpty()) {
+                serverHost = "localhost";
+                break;
+            }
+            // Basic IP format validation
+            if (input.matches("\\d+\\.\\d+\\.\\d+\\.\\d+") || input.equals("localhost")) {
+                serverHost = input;
+                break;
+            } else {
+                System.out.println(RED + "  [!] Invalid IP format. Example: 192.168.1.5" + RESET);
+            }
+        }
 
-            System.out.println(GREEN + BOLD + "  [✔] Server se Connected!" + RESET);
+        System.out.println();
+        System.out.println(CYAN + "  Connecting to " + BOLD + serverHost + ":" + SERVER_PORT + RESET + CYAN + " ..." + RESET);
+        System.out.println();
+
+        try (Socket socket = new Socket(serverHost, SERVER_PORT)) {
+
+            System.out.println(GREEN + BOLD + "  [✔] Connected to Server!" + RESET);
             System.out.println(YELLOW + "  ──────────────────────────────────────────────────" + RESET);
             System.out.println();
 
             BufferedReader in  = new BufferedReader(new InputStreamReader(socket.getInputStream()));
             PrintWriter out    = new PrintWriter(socket.getOutputStream(), true);
-            Scanner scanner    = new Scanner(System.in);
+            Scanner scanner    = ipScanner;
 
-            // Thread: Server se messages receive karo
+            // Thread: Receive messages from server
             Thread receiveThread = new Thread(() -> {
                 try {
                     String serverMessage;
@@ -47,7 +76,7 @@ public class ChatClient {
                     }
                 } catch (IOException e) {
                     if (running) {
-                        System.out.println(RED + "\n  [✘] Server se connection toot gaya." + RESET);
+                        System.out.println(RED + "\n  [✘] Connection to server lost." + RESET);
                     }
                 } finally {
                     running = false;
@@ -57,14 +86,14 @@ public class ChatClient {
             receiveThread.setDaemon(true);
             receiveThread.start();
 
-            // Main thread: Messages send karo
+            // Main thread: Send messages
             while (running) {
                 if (scanner.hasNextLine()) {
                     String userInput = scanner.nextLine().trim();
                     if (!userInput.isEmpty()) {
                         out.println(userInput);
                         if (userInput.equalsIgnoreCase("/quit")) {
-                            System.out.println(YELLOW + "\n  Goodbye! Phir milenge. 👋" + RESET);
+                            System.out.println(YELLOW + "\n  Goodbye! See you next time. 👋" + RESET);
                             running = false;
                             break;
                         }
@@ -73,15 +102,15 @@ public class ChatClient {
             }
 
         } catch (ConnectException e) {
-            System.out.println(RED + BOLD + "\n  [✘] Server nahi mila!" + RESET);
-            System.out.println(YELLOW + "  Pehle ChatServer.java run karo, phir yeh chalao." + RESET);
+            System.out.println(RED + BOLD + "\n  [✘] Server not found!" + RESET);
+            System.out.println(YELLOW + "  Please run ChatServer.java first, then launch this." + RESET);
         } catch (IOException e) {
             System.out.println(RED + "  [✘] Error: " + e.getMessage() + RESET);
         }
 
         System.out.println();
         System.out.println(CYAN + "  ══════════════════════════════════════════════════" + RESET);
-        System.out.println(CYAN + "  Connection closed. Program band ho raha hai..." + RESET);
+        System.out.println(CYAN + "  Connection closed. Exiting program..." + RESET);
         System.out.println(CYAN + "  ══════════════════════════════════════════════════" + RESET);
     }
 
@@ -127,10 +156,10 @@ public class ChatClient {
         System.out.println(MAGENTA + BOLD + "  ║" + YELLOW        + "              C H A T   C L I E N T            " + MAGENTA + "║" + RESET);
         System.out.println(MAGENTA + BOLD + "  ║                                                  ║" + RESET);
         System.out.println(MAGENTA + BOLD + "  ╠══════════════════════════════════════════════════╣" + RESET);
-        System.out.println(MAGENTA + BOLD + "  ║  " + GREEN + "/list" + WHITE + "              → Online users dekho      " + MAGENTA + BOLD + "║" + RESET);
-        System.out.println(MAGENTA + BOLD + "  ║  " + GREEN + "/pm <user> <msg>" + WHITE + "   → Private message bhejo   " + MAGENTA + BOLD + "║" + RESET);
-        System.out.println(MAGENTA + BOLD + "  ║  " + GREEN + "/history" + WHITE + "           → Chat history dekho     " + MAGENTA + BOLD + "║" + RESET);
-        System.out.println(MAGENTA + BOLD + "  ║  " + RED   + "/quit" + WHITE + "              → Chat chodo             " + MAGENTA + BOLD + "║" + RESET);
+        System.out.println(MAGENTA + BOLD + "  ║  " + GREEN + "/list" + WHITE + "              → View online users       " + MAGENTA + BOLD + "║" + RESET);
+        System.out.println(MAGENTA + BOLD + "  ║  " + GREEN + "/pm <user> <msg>" + WHITE + "   → Send a private message  " + MAGENTA + BOLD + "║" + RESET);
+        System.out.println(MAGENTA + BOLD + "  ║  " + GREEN + "/history" + WHITE + "           → View chat history      " + MAGENTA + BOLD + "║" + RESET);
+        System.out.println(MAGENTA + BOLD + "  ║  " + RED   + "/quit" + WHITE + "              → Leave the chat         " + MAGENTA + BOLD + "║" + RESET);
         System.out.println(MAGENTA + BOLD + "  ╚══════════════════════════════════════════════════╝" + RESET);
         System.out.println();
     }

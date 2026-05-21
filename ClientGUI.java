@@ -1,6 +1,5 @@
 package project_2;
 
-
 import javax.swing.*;
 import javax.swing.border.*;
 import javax.swing.text.*;
@@ -37,6 +36,8 @@ public class ClientGUI extends JFrame {
     private BufferedReader in;
     private String username;
     private volatile boolean connected = false;
+    // FIX: track whether username has been sent to server
+    private volatile boolean usernameSent = false;
 
     // ─── Components ─────────────────────────────────────────────────
     private JTextPane chatPane;
@@ -116,7 +117,6 @@ public class ClientGUI extends JFrame {
                 BorderFactory.createLineBorder(new Color(60, 60, 100), 2),
                 new EmptyBorder(30, 40, 30, 40)));
 
-        // Title
         JLabel connectTitle = new JLabel("Connect to Server");
         connectTitle.setFont(new Font("Segoe UI", Font.BOLD, 22));
         connectTitle.setForeground(ACCENT_CYAN);
@@ -127,7 +127,6 @@ public class ClientGUI extends JFrame {
         subtitle.setForeground(TEXT_GRAY);
         subtitle.setAlignmentX(Component.CENTER_ALIGNMENT);
 
-        // Show own IP
         String myIP = "unknown";
         try { myIP = InetAddress.getLocalHost().getHostAddress(); } catch (Exception ignored) {}
         JLabel myIPLabel = new JLabel("Your IP: " + myIP);
@@ -135,7 +134,6 @@ public class ClientGUI extends JFrame {
         myIPLabel.setForeground(ACCENT_GREEN);
         myIPLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
 
-        // Fields
         ipField = makeTextField("Server IP  (e.g. 192.168.1.5)", 22);
         usernameField = makeTextField("Username", 22);
 
@@ -144,7 +142,6 @@ public class ClientGUI extends JFrame {
         connectBtn.setFont(new Font("Segoe UI", Font.BOLD, 15));
         connectBtn.addActionListener(e -> attemptConnect());
 
-        // Enter key
         ActionListener connectAction = e -> attemptConnect();
         ipField.addActionListener(connectAction);
         usernameField.addActionListener(connectAction);
@@ -191,6 +188,7 @@ public class ClientGUI extends JFrame {
 
                 username = finalUname;
                 connected = true;
+                usernameSent = false; // reset for fresh connection
 
                 SwingUtilities.invokeLater(() -> {
                     serverLabel.setText("Connected: " + finalIp + ":5000");
@@ -199,16 +197,41 @@ public class ClientGUI extends JFrame {
                     switchToChatUI();
                 });
 
-                // Send username to server (skip welcome lines)
+                // FIX: Robust handshake — respond to any username prompt,
+                // handle taken-name retries, then process chat messages
                 String line;
                 while ((line = in.readLine()) != null) {
-                    if (line.startsWith(">> Enter your username:")) {
+                    if (line.startsWith("WELCOME:")) {
+                        // skip banner, wait for username prompt
+
+                    } else if (line.contains("Enter your username:")) {
+                        // Server is asking for name — send it
                         out.println(username);
+                        usernameSent = true;
+
+                    } else if (line.contains("is already taken") || line.contains("cannot be empty")) {
+                        // Username rejected — ask user to pick a new one
+                        final String serverMsg = line;
+                        SwingUtilities.invokeLater(() -> {
+                            String newName = JOptionPane.showInputDialog(
+                                    ClientGUI.this,
+                                    serverMsg + "\nEnter a different username:",
+                                    "Username Taken",
+                                    JOptionPane.WARNING_MESSAGE);
+                            if (newName != null && !newName.trim().isEmpty()) {
+                                username = newName.trim();
+                                setTitle("JavaChat — " + username);
+                            }
+                        });
+                        // Wait for EDT to update username, then send
+                        try { Thread.sleep(200); } catch (InterruptedException ignored) {}
+                        out.println(username);
+
                     } else if (line.startsWith("USERLIST:")) {
                         updateUserList(line.substring(9));
-                    } else if (line.startsWith("WELCOME:")) {
-                        // skip banner
+
                     } else {
+                        // Regular chat message
                         final String msg = line;
                         SwingUtilities.invokeLater(() -> displayMessage(msg));
                     }
@@ -225,7 +248,7 @@ public class ClientGUI extends JFrame {
                     SwingUtilities.invokeLater(() -> {
                         statusLabel.setText("● DISCONNECTED");
                         statusLabel.setForeground(ACCENT_RED);
-                        displaySystemMessage("Connection to server lost.");
+                        if (chatPane != null) displaySystemMessage("Connection to server lost.");
                     });
                 }
             }
@@ -236,7 +259,7 @@ public class ClientGUI extends JFrame {
         getContentPane().removeAll();
         getContentPane().setLayout(new BorderLayout(0, 0));
 
-        // Re-add top bar
+        // Top bar
         JPanel topBar = new JPanel(new BorderLayout());
         topBar.setBackground(BG_PANEL);
         topBar.setBorder(new EmptyBorder(10, 18, 10, 18));
@@ -307,7 +330,6 @@ public class ClientGUI extends JFrame {
         userScroll.setBackground(BG_PANEL);
         userScroll.getViewport().setBackground(BG_PANEL);
 
-        // Commands help
         JTextArea helpArea = new JTextArea(
                 "  Commands:\n" +
                         "  Double-click user → PM\n" +
@@ -333,7 +355,6 @@ public class ClientGUI extends JFrame {
                 new MatteBorder(1, 0, 0, 0, new Color(50, 50, 75)),
                 new EmptyBorder(10, 14, 10, 14)));
 
-        // PM controls
         JPanel pmPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 0));
         pmPanel.setBackground(BG_PANEL);
 
@@ -351,7 +372,6 @@ public class ClientGUI extends JFrame {
         pmPanel.add(pmCheckBox);
         pmPanel.add(pmTargetBox);
 
-        // Input field
         inputField = new JTextField();
         inputField.setBackground(BG_INPUT);
         inputField.setForeground(Color.WHITE);
@@ -362,7 +382,6 @@ public class ClientGUI extends JFrame {
                 new EmptyBorder(6, 12, 6, 12)));
         inputField.addActionListener(e -> sendMessage());
 
-        // Send button
         sendBtn = makeButton("Send  ➤", ACCENT_CYAN);
         sendBtn.setFont(new Font("Segoe UI", Font.BOLD, 13));
         sendBtn.addActionListener(e -> sendMessage());
@@ -454,7 +473,8 @@ public class ClientGUI extends JFrame {
         } catch (Exception ignored) {}
     }
 
-    private void appendStyled(String text, Color fg, boolean bold, int size, Color bg) throws BadLocationException {
+    private void appendStyled(String text, Color fg, boolean bold, int size, Color bg)
+            throws BadLocationException {
         SimpleAttributeSet attr = new SimpleAttributeSet();
         StyleConstants.setForeground(attr, fg);
         StyleConstants.setBold(attr, bold);

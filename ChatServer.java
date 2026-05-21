@@ -1,4 +1,5 @@
-package chatapp;
+
+package project_2;
 
 import java.io.*;
 import java.net.*;
@@ -7,118 +8,105 @@ import java.util.*;
 public class ChatServer {
 
     private static final int PORT = 5000;
-    private static Map<String, PrintWriter> activeClients = new HashMap<>();
+    private static final Map<String, PrintWriter> activeClients = new HashMap<>();
+    private static ServerGUI gui;
 
-    // ─── ANSI Color Codes ───────────────────────────────────────────
-    static final String RESET   = "\u001B[0m";
-    static final String BOLD    = "\u001B[1m";
-    static final String RED     = "\u001B[31m";
-    static final String GREEN   = "\u001B[32m";
-    static final String YELLOW  = "\u001B[33m";
-    static final String BLUE    = "\u001B[34m";
-    static final String MAGENTA = "\u001B[35m";
-    static final String CYAN    = "\u001B[36m";
-    static final String WHITE   = "\u001B[37m";
-    static final String BG_DARK = "\u001B[40m";
-    // ────────────────────────────────────────────────────────────────
+    public static void setGUI(ServerGUI g) {
+        gui = g;
+    }
 
-    public static void main(String[] args) {
-        printServerBanner();
-        ChatLogger.log("=== SERVER STARTED ===");
-
+    public static void start() throws IOException {
+        // FIX 1: try-with-resources so serverSocket always closes cleanly
         try (ServerSocket serverSocket = new ServerSocket(PORT)) {
-            log(GREEN, "READY", "Waiting for clients on port " + PORT + "...");
+            log("SERVER", "Started on port " + PORT);
+
+            try {
+                InetAddress localIP = InetAddress.getLocalHost();
+                log("HOST IP", localIP.getHostAddress() + "  ← Share this IP with clients");
+            } catch (UnknownHostException e) {
+                log("WARN", "Could not detect LAN IP.");
+            }
+
             while (true) {
                 Socket clientSocket = serverSocket.accept();
-                Thread t = new Thread(new ClientHandler(clientSocket));
-                t.start();
+                new Thread(new ClientHandler(clientSocket)).start();
             }
-        } catch (IOException e) {
-            log(RED, "ERROR", e.getMessage());
         }
     }
 
-    // ─── Formatted Log ──────────────────────────────────────────────
-    static void log(String color, String tag, String msg) {
-        System.out.println(color + BOLD + "[" + tag + "]" + RESET + " " + msg);
-    }
-
-    // ─── Server Banner ──────────────────────────────────────────────
-    static void printServerBanner() {
-        System.out.println();
-        System.out.println(CYAN + BOLD + "  ╔══════════════════════════════════════════════════╗" + RESET);
-        System.out.println(CYAN + BOLD + "  ║                                                  ║" + RESET);
-        System.out.println(CYAN + BOLD + "  ║" + YELLOW + BOLD + "        ░░░  JavaChat Server  ░░░               " + CYAN + "  ║" + RESET);
-        System.out.println(CYAN + BOLD + "  ║" + WHITE  + "          Multi-Client   |   Core Java          " + CYAN + "  ║" + RESET);
-        System.out.println(CYAN + BOLD + "  ║" + GREEN  + "              PORT: 5000                        " + CYAN + "  ║" + RESET);
-        System.out.println(CYAN + BOLD + "  ║                                                  ║" + RESET);
-        System.out.println(CYAN + BOLD + "  ╠══════════════════════════════════════════════════╣" + RESET);
-        System.out.println(CYAN + BOLD + "  ║  " + WHITE + "Features:" + RESET);
-        System.out.println(CYAN + BOLD + "  ║  " + GREEN + "  ✔  " + WHITE + "Multi-client support (Threads)" + RESET);
-        System.out.println(CYAN + BOLD + "  ║  " + GREEN + "  ✔  " + WHITE + "Group broadcast messaging" + RESET);
-        System.out.println(CYAN + BOLD + "  ║  " + GREEN + "  ✔  " + WHITE + "Private messaging (/pm)" + RESET);
-        System.out.println(CYAN + BOLD + "  ║  " + GREEN + "  ✔  " + WHITE + "Chat history saved to file" + RESET);
-        System.out.println(CYAN + BOLD + "  ║  " + GREEN + "  ✔  " + WHITE + "Online user list (/list)" + RESET);
-        System.out.println(CYAN + BOLD + "  ╚══════════════════════════════════════════════════╝" + RESET);
-        System.out.println();
-    }
-
-    // ─── Broadcast ──────────────────────────────────────────────────
     public static synchronized void broadcast(String message, String senderName) {
-        log(MAGENTA, "BROADCAST", message);
+        log("BROADCAST", message);
         ChatLogger.log(message);
         for (Map.Entry<String, PrintWriter> entry : activeClients.entrySet()) {
             if (!entry.getKey().equals(senderName)) {
                 entry.getValue().println(message);
             }
         }
+        if (gui != null) gui.appendMessage(message, "broadcast");
     }
 
-    // ─── Private Message ────────────────────────────────────────────
     public static synchronized void privateMessage(String from, String to, String message) {
         PrintWriter targetWriter = activeClients.get(to);
         if (targetWriter != null) {
-            targetWriter.println("[Private from " + from + "]: " + message);
+            String pm = "[Private from " + from + "]: " + message;
+            targetWriter.println(pm);
             ChatLogger.log("PRIVATE | " + from + " -> " + to + ": " + message);
-            log(YELLOW, "PM", from + " -> " + to + ": " + message);
+            log("PM", from + " -> " + to + ": " + message);
+            if (gui != null) gui.appendMessage("PM: " + from + " → " + to + ": " + message, "private");
         } else {
             PrintWriter senderWriter = activeClients.get(from);
             if (senderWriter != null) {
-                senderWriter.println(">> User '" + to + "' online nahi hai.");
+                senderWriter.println(">> User '" + to + "' is not online.");
             }
         }
     }
 
-    // ─── User List ──────────────────────────────────────────────────
     public static synchronized void sendUserList(String requester) {
         PrintWriter pw = activeClients.get(requester);
         if (pw != null) {
-            pw.println("\n+----- Online Users (" + activeClients.size() + ") -----+");
-            for (String name : activeClients.keySet()) {
-                pw.println("|  * " + name + (name.equals(requester) ? " (You)" : ""));
-            }
-            pw.println("+--------------------------------+\n");
+            pw.println("USERLIST:" + String.join(",", activeClients.keySet()));
         }
     }
 
     public static synchronized void addClient(String username, PrintWriter writer) {
         activeClients.put(username, writer);
-        log(GREEN, "JOIN", username + " connected. Total: " + activeClients.size());
+        log("JOIN", username + " connected. Total: " + activeClients.size());
+        if (gui != null) {
+            gui.appendMessage(username + " has joined the chat.", "join");
+            gui.updateUserList(new ArrayList<>(activeClients.keySet()));
+        }
     }
 
     public static synchronized void removeClient(String username) {
         activeClients.remove(username);
-        log(RED, "LEFT", username + " disconnected. Total: " + activeClients.size());
+        log("LEFT", username + " disconnected. Total: " + activeClients.size());
+        if (gui != null) {
+            gui.updateUserList(new ArrayList<>(activeClients.keySet()));
+        }
     }
 
     public static synchronized boolean usernameExists(String username) {
         return activeClients.containsKey(username);
     }
 
+    public static synchronized List<String> getOnlineUsers() {
+        return new ArrayList<>(activeClients.keySet());
+    }
+
+    // FIX 2: snapshot of activeClients for safe broadcast after removal
+    private static synchronized Map<String, PrintWriter> getClientSnapshot() {
+        return new HashMap<>(activeClients);
+    }
+
+    private static void log(String tag, String msg) {
+        String line = "[" + tag + "] " + msg;
+        System.out.println(line);
+        if (gui != null) gui.appendLog(line);
+    }
+
     // ─── Client Handler ─────────────────────────────────────────────
     static class ClientHandler implements Runnable {
-
-        private Socket socket;
+        private final Socket socket;
         private PrintWriter out;
         private BufferedReader in;
         private String username;
@@ -133,38 +121,34 @@ public class ChatServer {
                 in  = new BufferedReader(new InputStreamReader(socket.getInputStream()));
                 out = new PrintWriter(socket.getOutputStream(), true);
 
-                // Send welcome banner to client
-                out.println(" ");
-                out.println("  +==================================================+");
-                out.println("  |          JavaChat Server - Connected!            |");
-                out.println("  |          Port: 5000  |  Core Java Chat           |");
-                out.println("  +==================================================+");
-                out.println("  Commands: /list | /pm <user> <msg> | /quit");
-                out.println("  +--------------------------------------------------+");
-                out.println(" ");
-                out.println(">> Apna username enter karo:");
+                out.println("WELCOME:JavaChat Server Connected! Port 5000");
+                out.println(">> Enter your username:");
 
-                // Username validation
+                // Username negotiation loop
                 while (true) {
                     username = in.readLine();
-                    if (username == null || username.trim().isEmpty()) {
-                        out.println(">> [!] Username empty nahi ho sakta. Dobara try karo:");
+                    if (username == null) return; // client disconnected before sending name
+                    username = username.trim();
+                    if (username.isEmpty()) {
+                        out.println(">> [!] Username cannot be empty. Please try again:");
                         continue;
                     }
-                    username = username.trim();
                     if (ChatServer.usernameExists(username)) {
-                        out.println(">> [!] '" + username + "' pehle se liya hua hai. Dusra naam lo:");
+                        out.println(">> [!] '" + username + "' is already taken. Please choose another name:");
+                        out.println(">> Enter your username:");
                     } else {
                         break;
                     }
                 }
 
                 ChatServer.addClient(username, out);
-                out.println("\n>> [+] Welcome, " + username + "! Tum chat room mein aa gaye ho.\n");
-                ChatServer.broadcast("[+] " + username + " join ho gaya!", username);
+                out.println(">> [+] Welcome, " + username + "! You have joined the chat room.");
+                ChatServer.broadcast("[+] " + username + " has joined!", username);
                 ChatLogger.log(username + " joined.");
 
-                // Message loop
+                // Send current user list to ALL clients
+                broadcastUserList();
+
                 String message;
                 while ((message = in.readLine()) != null) {
                     message = message.trim();
@@ -172,9 +156,6 @@ public class ChatServer {
                         break;
                     } else if (message.equalsIgnoreCase("/list")) {
                         ChatServer.sendUserList(username);
-                    } else if (message.equalsIgnoreCase("/history")) {
-                        ChatLogger.printHistory();
-                        out.println(">> History server console pe print ho gayi.");
                     } else if (message.startsWith("/pm ")) {
                         String[] parts = message.split(" ", 3);
                         if (parts.length < 3) {
@@ -184,20 +165,37 @@ public class ChatServer {
                         }
                     } else {
                         String formatted = username + " >> " + message;
-                        out.println(formatted);
+                        out.println(formatted);          // echo back to sender
                         ChatServer.broadcast(formatted, username);
                     }
                 }
 
             } catch (IOException e) {
-                ChatServer.log(RED, "WARN", "Abrupt disconnect: " + username);
+                System.out.println("[WARN] Abrupt disconnect: " + username);
             } finally {
                 if (username != null) {
+                    // FIX 3: removeClient FIRST, then broadcast using snapshot
+                    // so we never iterate a map that's being modified
                     ChatServer.removeClient(username);
-                    ChatServer.broadcast("[-] " + username + " chala gaya.", username);
+                    ChatServer.broadcast("[-] " + username + " has left.", username);
                     ChatLogger.log(username + " left.");
+
+                    // Safe userlist broadcast using snapshot
+                    Map<String, PrintWriter> snapshot = getClientSnapshot();
+                    String userList = "USERLIST:" + String.join(",", snapshot.keySet());
+                    for (PrintWriter pw : snapshot.values()) {
+                        pw.println(userList);
+                    }
                 }
                 try { socket.close(); } catch (IOException ignored) {}
+            }
+        }
+
+        private void broadcastUserList() {
+            Map<String, PrintWriter> snapshot = getClientSnapshot();
+            String userList = "USERLIST:" + String.join(",", snapshot.keySet());
+            for (PrintWriter pw : snapshot.values()) {
+                pw.println(userList);
             }
         }
     }
