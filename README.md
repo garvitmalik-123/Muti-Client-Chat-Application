@@ -1,15 +1,15 @@
-# 💬 Java Multi-Client Chat Application
+# 💬 Java GUI Multi-Client Chat Application
 
 <div align="center">
 
 ![Java](https://img.shields.io/badge/Java-17+-orange?style=for-the-badge&logo=openjdk)
-![Socket Programming](https://img.shields.io/badge/Socket-Programming-blue?style=for-the-badge)
-![Multi Client](https://img.shields.io/badge/Multi--Client-success?style=for-the-badge)
-![Console UI](https://img.shields.io/badge/Terminal-UI-purple?style=for-the-badge)
+![Java Swing](https://img.shields.io/badge/Java-Swing-blue?style=for-the-badge)
+![Socket Programming](https://img.shields.io/badge/Socket-Programming-success?style=for-the-badge)
+![GUI Application](https://img.shields.io/badge/Desktop-GUI-purple?style=for-the-badge)
 
-### 🚀 Real-Time LAN Based Chat System using Java Socket Programming
+### 🚀 Real-Time GUI Based Chat System using Java Swing & Socket Programming
 
-*A terminal based multi-client chat application with private messaging, colorful UI, chat history and live user management.*
+*A modern multi-client desktop chat application with real-time messaging, private chats, colorful UI and LAN support.*
 
 </div>
 
@@ -18,31 +18,33 @@
 # ✨ Features
 
 ✅ Real-time messaging  
+✅ GUI based desktop application  
 ✅ Multi-client support  
 ✅ Private messaging system  
-✅ Live online users list  
+✅ Online users list  
 ✅ Chat history support  
-✅ Beautiful colored terminal UI  
+✅ Beautiful Java Swing interface  
 ✅ LAN based communication  
-✅ Thread handling for multiple clients  
-✅ Clean and modular Java code structure
+✅ Multi-threaded architecture  
+✅ Clean modular code structure  
 
 ---
 
-# 📸 Preview
+# 📸 Application Preview
 
-```bash
-╔══════════════════════════════════════════════════╗
-║                                                  ║
-║        ██╗ █████╗ ██╗   ██╗ █████╗               ║
-║        ██║██╔══██╗██║   ██║██╔══██╗              ║
-║        ██║███████║██║   ██║███████║              ║
-║   ██   ██║██╔══██║╚██╗ ██╔╝██╔══██║              ║
-║   ╚█████╔╝██║  ██║ ╚████╔╝ ██║  ██║              ║
-║    ╚════╝ ╚═╝  ╚═╝  ╚═══╝  ╚═╝  ╚═╝              ║
-║              C H A T   C L I E N T               ║
-║                                                  ║
-╚══════════════════════════════════════════════════╝
+```text
+╔══════════════════════════════════════════════╗
+║           JAVA CHAT APPLICATION              ║
+╠══════════════════════════════════════════════╣
+║ [Online Users]        [ Chat Window ]        ║
+║                                              ║
+║ Garvit  ●                                     
+║ Aryan   ●          Garvit >> Hello!          
+║ Rahul   ●          Aryan  >> Hi Bro 👋       
+║                                              ║
+╠══════════════════════════════════════════════╣
+║ Message: __________________________ [Send]   ║
+╚══════════════════════════════════════════════╝
 ```
 
 ---
@@ -52,10 +54,11 @@
 | Technology | Usage |
 |------------|-------|
 | Java | Core Programming |
+| Java Swing | GUI Design |
 | Socket Programming | Client-Server Communication |
 | Multithreading | Handle Multiple Clients |
 | TCP/IP | Network Communication |
-| ANSI Escape Codes | Colored Console UI |
+| Java Collections | User Management |
 
 ---
 
@@ -64,22 +67,27 @@
 ```bash
 project_2/
 │
+├── Main.java
 ├── ChatServer.java
-├── ChatClient.java
+├── ChatClientGUI.java
 ├── ClientHandler.java
+├── ServerGUI.java
 └── ChatHistory.txt
 ```
 
 ---
 
-# ⚡ Commands
+# ⚡ Features Breakdown
 
-| Command | Description |
+| Feature | Description |
 |---------|-------------|
-| `/list` | View online users |
-| `/pm <user> <msg>` | Send private message |
-| `/history` | View chat history |
-| `/quit` | Exit chat |
+| Real-Time Chat | Instant messaging between clients |
+| GUI Interface | Modern desktop UI using Swing |
+| Multi Client | Multiple users can connect simultaneously |
+| Private Messaging | Send messages to specific users |
+| Online Users | Live active users list |
+| Chat History | Stores previous conversations |
+| LAN Support | Works across same WiFi/network |
 
 ---
 
@@ -94,7 +102,7 @@ cd your-repo-name
 
 ---
 
-## 2️⃣ Compile Files
+## 2️⃣ Compile Project
 
 ```bash
 javac project_2/*.java
@@ -110,46 +118,49 @@ java project_2.ChatServer
 
 ---
 
-## 4️⃣ Start Client
+## 4️⃣ Start GUI Client
 
 ```bash
-java project_2.ChatClient
+java project_2.ChatClientGUI
 ```
 
 ---
 
-# 🌐 LAN Usage
+# 🌐 LAN Connectivity
 
-If users are connected on the same WiFi/LAN:
+Users connected on the same WiFi/LAN can communicate easily.
 
-1. Run the server on one machine.
-2. Copy the server IP.
-3. Enter that IP while starting client.
-4. Start chatting in real-time.
+### Steps:
+1. Start server on one system
+2. Find server IP
+3. Enter IP in GUI client
+4. Connect and start chatting
 
 ---
 
-# 🧠 Concepts Used
+# 🧠 Core Concepts Used
 
 - Socket Programming
+- Java Swing GUI
+- Event Handling
 - Multithreading
-- Synchronization
 - TCP Communication
-- BufferedReader & PrintWriter
+- Client-Server Architecture
 - Exception Handling
-- ANSI Terminal Styling
+- File Handling
 
 ---
 
-# 🎯 Future Improvements
+# 🎯 Future Enhancements
 
-- GUI version using Java Swing
-- File sharing support
-- Voice chat integration
-- End-to-end encryption
-- Database integration
-- User authentication system
-- Docker deployment
+- Dark Mode UI 🌙
+- Emoji Support 😄
+- File Sharing 📁
+- Voice Chat 🎤
+- Database Integration 🛢️
+- Authentication System 🔐
+- Docker Deployment 🐳
+- Cloud Hosting ☁️
 
 ---
 
@@ -157,7 +168,7 @@ If users are connected on the same WiFi/LAN:
 
 ## Garvit Malik
 
-💡 Passionate about Backend Development, System Design & Java Engineering.
+💡 Passionate about Backend Development, Java Engineering & System Design.
 
 ### Connect With Me
 
@@ -168,8 +179,8 @@ If users are connected on the same WiFi/LAN:
 
 <div align="center">
 
-### ⭐ If you liked this project, give it a star ⭐
+## ⭐ Star This Repository If You Liked It ⭐
 
-### 🚀 Keep Building. Keep Learning.
+### 🚀 Build. Learn. Repeat.
 
 </div>
